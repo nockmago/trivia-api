@@ -46,6 +46,9 @@ def create_app(test_config=None):
     selection = Question.query.all()
     questions = paginate_questions(request, selection)
 
+    if len(questions) == 0:
+      abort(404)
+
     return jsonify({
       'success': True,
       'current_category': None,
@@ -59,19 +62,20 @@ def create_app(test_config=None):
   def delete_question(id):
     try:
       question = Question.query.filter(Question.id == id).one_or_none()
-
-      if question is None: 
-        abort(404)
+      
       
       question.delete()
 
       return jsonify({
         'success': True,
-        'delete': id,
+        'deleted': id,
         'total_questions': len(Question.query.all())
               })
-    except: 
-      abort(422)
+    except:
+      if question is None: 
+        abort(404) 
+      else:
+        abort(422)
 
     
   @app.route('/questions', methods=['POST'])
@@ -136,7 +140,6 @@ def create_app(test_config=None):
     body = request.get_json()
     previous_questions = body.get('previous_questions', None)
     quiz_category = body.get('quiz_category', None)
-    print('FUCKKKKKK',quiz_category)
 
     if quiz_category is not None: 
       selection = Question.query.filter(Question.category == quiz_category['id']).all()
@@ -156,26 +159,27 @@ def create_app(test_config=None):
       'question': new_question.format()
     })
 
+  @app.errorhandler(404)
+  def not_found(error):
+    return (
+            jsonify({"success": False, "error": 404, "message": "resource not found"}),
+            404,
+        )
 
+  @app.errorhandler(422)
+  def unprocessable(error):
+        return (
+            jsonify({"success": False, "error": 422, "message": "unprocessable"}),
+            422,
+        )
 
+  @app.errorhandler(400)
+  def bad_request(error):
+    return jsonify({"success": False, "error": 400, "message": "bad request"}), 400
 
-  '''
-  @TODO: 
-  Create a POST endpoint to get questions to play the quiz. 
-  This endpoint should take category and previous question parameters 
-  and return a random questions within the given category, 
-  if provided, and that is not one of the previous questions. 
-
-  TEST: In the "Play" tab, after a user selects "All" or a category,
-  one question at a time is displayed, the user is allowed to answer
-  and shown whether they were correct or not. 
-  '''
-
-  '''
-  @TODO: 
-  Create error handlers for all expected errors 
-  including 404 and 422. 
-  '''
+  @app.errorhandler(500)
+  def internal_error(error):
+    return jsonify({"success": False, "error": 500, "message": "internal server error"}), 500
   
   return app
 
