@@ -30,6 +30,13 @@ class TriviaTestCase(unittest.TestCase):
             "current_category": 1
         }
 
+        self.quiz_data_wrong = {
+            "previous_questions": [question.id for question in Question.query.limit(5).all()],
+            "curent_category": 1
+        }
+ 
+        
+
         # binds the app to the current context
         with self.app.app_context():
             self.db = SQLAlchemy()
@@ -118,6 +125,15 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data["created"])
         self.assertTrue(data["total_questions"])
 
+    def test_create_new_question_bad_request(self):
+        res = self.client().post("/questions")
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data["success"], False)
+        self.assertEqual(data["message"], 'unprocessable')
+
+
     def test_get_questions_by_category(self): 
         res = self.client().get('/categories/1/questions')
         data = json.loads(res.data)
@@ -127,6 +143,14 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data["total_questions"])
         self.assertTrue(len(data["questions"]))
         self.assertTrue(data['current_category'])
+    
+    def test_get_questions_by_category_not_found(self): 
+        res = self.client().get('/categories/2999/questions')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data["success"], False)
+        self.assertEqual(data["message"], 'resource not found')
 
     def test_quizzes(self): 
         res = self.client().post('/quizzes', json=self.quiz_data)
@@ -135,11 +159,22 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data["success"], True)
         self.assertTrue(data["question"])
+    
+    def test_quizzes_422(self): 
+        res = self.client().post('/quizzes', json=self.quiz_data_wrong)
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data["success"], False)
+        self.assertEqual(data["message"], 'unprocessable')
+
+    
 
 
 
 
-# curl -X POST -H "Content-Type: application/json" -d '{"previous_questions": [10,11,12], "current_category": "2"}' http://localhost:3000/quizzes
+
+# curl -X POST -H "Content-Type: application/json" -d '{"previous_questions": [10,11,12], "current_category": "1"}' http://localhost:3000/quizzes
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
