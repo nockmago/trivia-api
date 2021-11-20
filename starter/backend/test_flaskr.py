@@ -139,7 +139,7 @@ class TriviaTestCase(unittest.TestCase):
 
 
 
-# curl -X POST -H "Content-Type: application/json" -d '{"question": "how u doing", "answer": "very good", "difficulty": 5, "category": 1}' http://localhost:3000/questions
+# curl -X POST -H "Content-Type: application/json" -d '{"previous_questions": [10,11,12], "current_category": "2"}' http://localhost:3000/quizzes
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
