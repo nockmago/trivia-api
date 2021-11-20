@@ -39,6 +39,9 @@ def create_app(test_config=None):
         categories = {
             category.id: category.type for category in Category.query.all()}
 
+        if len(categories) == 0:
+            abort(404)
+
         return jsonify({
             "success": True,
             "categories": categories,
@@ -124,47 +127,74 @@ def create_app(test_config=None):
                 })
 
         except BaseException:
-
             abort(422)
 
     @app.route('/categories/<int:id>/questions')
     def get_questions_by_category(id):
-        current_category = Category.query.get(id).format()
-        selection = Question.query.filter(Question.category == id)
-        questions = paginate_questions(request, selection)
+        try:
+            current_category = Category.query.get(id).format()
+            selection = Question.query.filter(Question.category == id)
+            questions = paginate_questions(request, selection)
 
-        return jsonify({
-            'success': True,
-            'questions': questions,
-            'total_questions': len(selection.all()),
-            'current_category': current_category
-        })
+            return jsonify({
+                'success': True,
+                'questions': questions,
+                'total_questions': len(selection.all()),
+                'current_category': current_category
+            })
 
+        except BaseException:
+            if id not in [category.id for category in Category.query.all()]:
+                abort(404)
+            else:
+                abort(422)
+
+    # route to handle quiz playing
     @app.route('/quizzes', methods=['POST'])
     def get_quiz_question():
-        body = request.get_json()
-        previous_questions = body.get('previous_questions', None)
-        quiz_category = body.get('quiz_category', None)
 
-        if quiz_category is not None:
-            selection = Question.query.filter(
-                Question.category == quiz_category['id']).all()
+        try:
+            body = request.get_json()
+            previous_questions = body.get('previous_questions', None)
+            current_category = body.get('current_category', None)
 
-        else:
-            selection = Question.query.all()
+            if current_category is None:
+                abort(422)
 
-        previous_questions_ids = [question for question in previous_questions]
-        total_ids = [question.format()['id'] for question in selection]
-        available_ids = [
-            id for id in total_ids if id not in previous_questions_ids]
-        new_question_id = random.choice(available_ids)
+            # select questions from all categories
+            if current_category == 0:
+                selection = Question.query.all()
 
-        new_question = Question.query.get(new_question_id)
+            # select questions from current category
+            else:
+                selection = Question.query.filter(
+                    Question.category == current_category).all()
 
-        return jsonify({
-            'success': True,
-            'question': new_question.format()
-        })
+            # excluding previous questions from pool of choice
+            previous_questions_ids = [
+                question for question in previous_questions]
+            total_ids = [question.format()['id'] for question in selection]
+            available_ids = [
+                id for id in total_ids if id not in previous_questions_ids]
+
+            # ending the game if there are no more questions in the category
+            if len(available_ids) == 0:
+                return jsonify({
+                    'success': True
+                })
+
+            # getting a random question from remaining ones
+            new_question_id = random.choice(available_ids)
+
+            new_question = Question.query.get(new_question_id).format()
+
+            return jsonify({
+                'success': True,
+                'question': new_question
+            })
+
+        except BaseException:
+            abort(422)
 
     @app.errorhandler(404)
     def not_found(error):
@@ -174,8 +204,8 @@ def create_app(test_config=None):
     @app.errorhandler(422)
     def unprocessable(error):
         return (
-            jsonify({"success": False, "error": 422, 
-            "message": "unprocessable"}),
+            jsonify({"success": False, "error": 422,
+                     "message": "unprocessable"}),
             422,
         )
 
