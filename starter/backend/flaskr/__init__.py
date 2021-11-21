@@ -156,19 +156,19 @@ def create_app(test_config=None):
         try:
             body = request.get_json()
             previous_questions = body.get('previous_questions', None)
-            current_category = body.get('current_category', None)
+            current_category = body.get('quiz_category', None)
 
             if current_category is None:
                 abort(422)
 
             # select questions from all categories
-            if current_category == 0:
+            if current_category['id'] == 0:
                 selection = Question.query.all()
 
             # select questions from current category
             else:
                 selection = Question.query.filter(
-                    Question.category == current_category).all()
+                    Question.category == current_category['id']).all()
 
             # excluding previous questions from pool of choice
             previous_questions_ids = [

@@ -27,7 +27,7 @@ class TriviaTestCase(unittest.TestCase):
 
         self.quiz_data = {
             "previous_questions": [question.id for question in Question.query.limit(5).all()],
-            "current_category": 1
+            "quiz_category": {'type': 'History', 'id': '4'}
         }
 
         self.quiz_data_wrong = {
